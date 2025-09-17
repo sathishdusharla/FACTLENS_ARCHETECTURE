@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FACTLENS System Architecture</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+            color: #020617;
+        }
+        .container {
+            width: 100%;
+            max-width: 1600px;
+            background-color: #ffffff;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+        .caption {
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            color: #0f172a;
+        }
+        svg {
+            width: 100%;
+            height: auto;
+        }
+        /* SVG Text Styles */
+        .title-text { font-size: 14px; font-weight: bold; text-transform: uppercase; fill: #ffffff; }
+        .label-text { font-size: 12px; font-weight: 500; text-transform: uppercase; fill: #1e293b; }
+        .sub-label-text { font-size: 10px; fill: #475569; }
+        .arrow-label-text { font-size: 10px; font-style: italic; fill: #334155; }
+
+        /* SVG Shape Styles */
+        .layer-box { fill: #f1f5f9; stroke: #cbd5e1; stroke-width: 1; }
+        .module-header { fill: #0891b2; } /* Teal */
+        .module-body { fill: #f0f9ff; stroke: #0891b2; stroke-width: 1; }
+        .service-box { fill: #f8fafc; stroke: #475569; stroke-width: 1; }
+        .api-gateway-box { fill: #334155; }
+        .api-stack { fill: #f8fafc; stroke: #64748b; stroke-width: 1; }
+        .database-cylinder-top { fill: #14b8a6; stroke: #0f766e; stroke-width: 1; } /* Darker Teal */
+        .database-cylinder-body { fill: #ccfbf1; stroke: #0f766e; stroke-width: 1; }
+        .connector-line { stroke: #64748b; stroke-width: 1.5; fill: none; }
+        .data-flow-line { stroke: #3b82f6; stroke-width: 1.5; fill: none; }
+        .clickable-module { cursor: pointer; }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.visible .modal-content {
+            transform: scale(1);
+        }
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #64748b;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .modal-title {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: #0891b2;
+            font-size: 1.25rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .modal-description {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #334155;
+        }
+    </style>
+    <!-- Google Fonts for professional typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="caption">FACTLENS: AI-Powered Misinformation Radar - System Architecture Diagram</div>
+        <svg id="architecture-diagram" viewBox="0 0 1600 1150">
+            <!-- Defs for markers and filters -->
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+                </marker>
+                 <marker id="data-arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6" />
+                </marker>
+                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                    <feOffset dx="2" dy="2" result="offsetblur"/>
+                    <feComponentTransfer>
+                        <feFuncA type="linear" slope="0.5"/>
+                    </feComponentTransfer>
+                    <feMerge> 
+                        <feMergeNode/>
+                        <feMergeNode in="SourceGraphic"/> 
+                </feMerge>
+            </filter>
+            </defs>
+
+            <!-- Main Diagram Group to shift content down and center -->
+            <g transform="translate(100, 20)">
+
+             <!-- USER DEVICES & LEGEND -->
+            <g id="user-devices" class="clickable-module" transform="translate(450, 20)">
+                <rect x="0" y="0" width="300" height="60" rx="10" class="service-box" filter="url(#shadow)"/>
+                <path d="M 20 50 L 20 20 C 20 10, 30 10, 30 10 L 70 10 C 80 10, 80 20, 80 20 L 80 50 Z M 20 50 L 80 50" fill="#f8fafc" stroke="#475569" stroke-width="1.5" />
+                <rect x="45" y="52" width="10" height="2" fill="#475569"/>
+                 <text x="50" y="36" text-anchor="middle" class="sub-label-text">DESKTOP</text>
+
+                <rect x="125" y="10" width="40" height="50" rx="5" fill="#f8fafc" stroke="#475569" stroke-width="1.5" />
+                <rect x="140" y="15" width="10" height="2" rx="1" fill="#475569"/>
+                <text x="145" y="41" text-anchor="middle" class="sub-label-text">MOBILE</text>
+
+                <text x="225" y="37" text-anchor="middle" class="label-text">USER DEVICES</text>
+            </g>
+
+            <g id="legend" transform="translate(780, 5)">
+                <rect x="0" y="0" width="240" height="90" rx="10" class="service-box" filter="url(#shadow)"/>
+                <text x="120" y="18" text-anchor="middle" class="label-text" style="font-weight:bold;">LEGEND</text>
+                <line x1="15" y1="35" x2="35" y2="35" class="connector-line" marker-end="url(#arrowhead)"/>
+                <text x="55" y="38" class="sub-label-text">API / CONTROL FLOW</text>
+                <line x1="15" y1="55" x2="35" y2="55" class="data-flow-line" marker-end="url(#data-arrowhead)"/>
+                <text x="55" y="58" class="sub-label-text">DATA READ/WRITE FLOW</text>
+                <rect x="15" y="72" width="20" height="10" rx="2" class="database-cylinder-body"/>
+                <text x="55" y="80" class="sub-label-text">DATA STORAGE</text>
+            </g>
+
+            <!-- LAYERS -->
+            <rect x="10" y="400" width="1380" height="590" rx="15" class="layer-box" />
+            <text x="700" y="425" text-anchor="middle" class="label-text" fill="#475569">BACKEND & CLOUD INFRASTRUCTURE (GCP)</text>
+
+            <rect x="10" y="140" width="1380" height="230" rx="15" class="layer-box" />
+            <text x="700" y="165" text-anchor="middle" class="label-text" fill="#475569">FRONTEND LAYER</text>
+
+            <!-- RESPONSIVE WEB APP -->
+            <g id="web-app" class="clickable-module" transform="translate(280, 200)">
+                 <rect x="0" y="0" width="840" height="120" rx="10" class="module-body" filter="url(#shadow)" />
+                 <rect x="0" y="0" width="840" height="30" rx="10" ry="10" class="module-header" style="border-bottom-left-radius: 0; border-bottom-right-radius: 0;"/>
+                 <text x="420" y="21" text-anchor="middle" class="title-text">RESPONSIVE WEB APPLICATION</text>
+                 <text x="420" y="47" text-anchor="middle" class="sub-label-text">(REACT / NEXT.JS)</text>
+
+                 <g transform="translate(20, 65)">
+                    <rect x="0" y="0" width="150" height="40" rx="5" class="service-box" />
+                    <text x="75" y="26" text-anchor="middle" class="label-text">USER AUTHENTICATION</text>
+                 </g>
+                 <g transform="translate(180, 65)">
+                    <rect x="0" y="0" width="150" height="40" rx="5" class="service-box" />
+                    <text x="75" y="26" text-anchor="middle" class="label-text">CONTENT ANALYZER</text>
+                 </g>
+                 <g transform="translate(340, 65)">
+                    <rect x="0" y="0" width="150" height="40" rx="5" class="service-box" />
+                    <text x="75" y="26" text-anchor="middle" class="label-text">FACT WALL</text>
+                 </g>
+                 <g transform="translate(500, 65)">
+                    <rect x="0" y="0" width="150" height="40" rx="5" class="service-box" />
+                    <text x="75" y="26" text-anchor="middle" class="label-text">DASHBOARD</text>
+                 </g>
+                 <g transform="translate(660, 65)">
+                    <rect x="0" y="0" width="150" height="40" rx="5" class="service-box" />
+                    <text x="75" y="26" text-anchor="middle" class="label-text">LEADERBOARD</text>
+                 </g>
+            </g>
+            
+            <!-- API GATEWAY -->
+            <g id="api-gateway" class="clickable-module" transform="translate(550, 460)">
+                <rect x="0" y="0" width="300" height="50" rx="10" class="api-gateway-box" filter="url(#shadow)"/>
+                <text x="150" y="26" text-anchor="middle" class="title-text">API GATEWAY</text>
+                <text x="150" y="41" text-anchor="middle" class="sub-label-text" fill="#cbd5e1">(GOOGLE CLOUD FUNCTIONS)</text>
+            </g>
+
+            <!-- CORE SERVICES ROW 1 -->
+            <g id="core-services-row1">
+                 <!-- AI & NLP -->
+                <g id="ai-nlp" class="clickable-module" transform="translate(50, 540)">
+                    <rect x="0" y="0" width="300" height="120" rx="10" class="module-body" filter="url(#shadow)"/>
+                    <rect x="0" y="0" width="300" height="30" rx="10" ry="10" class="module-header"/>
+                    <text x="150" y="21" text-anchor="middle" class="title-text">AI & NLP PROCESSING</text>
+                    <text x="150" y="57" text-anchor="middle" class="label-text">GEMINI API (ANALYSIS)</text>
+                    <text x="150" y="82" text-anchor="middle" class="label-text">NLP (CLAIM EXTRACTION)</text>
+                    <text x="150" y="107" text-anchor="middle" class="label-text">AI MODERATION (SPAM)</text>
+                </g>
+                <!-- Firebase Auth -->
+                <g id="authentication" class="clickable-module" transform="translate(390, 540)">
+                    <rect x="0" y="0" width="300" height="120" rx="10" class="module-body" filter="url(#shadow)"/>
+                    <rect x="0" y="0" width="300" height="30" rx="10" ry="10" class="module-header"/>
+                    <text x="150" y="21" text-anchor="middle" class="title-text">AUTHENTICATION SERVICE</text>
+                    <text x="150" y="78" text-anchor="middle" class="label-text">FIREBASE AUTHENTICATION</text>
+                </g>
+                <!-- Gamification Service -->
+                <g id="gamification" class="clickable-module" transform="translate(730, 540)">
+                    <rect x="0" y="0" width="300" height="120" rx="10" class="module-body" filter="url(#shadow)"/>
+                    <rect x="0" y="0" width="300" height="30" rx="10" ry="10" class="module-header"/>
+                    <text x="150" y="21" text-anchor="middle" class="title-text">GAMIFICATION SERVICE</text>
+                    <text x="150" y="67" text-anchor="middle" class="label-text">POINT & BADGE LOGIC</text>
+                    <text x="150" y="92" text-anchor="middle" class="label-text">LEADERBOARD CALCULATION</text>
+                </g>
+                <!-- Explainability Service -->
+                <g id="explainability" class="clickable-module" transform="translate(1070, 540)">
+                    <rect x="0" y="0" width="300" height="120" rx="10" class="module-body" filter="url(#shadow)"/>
+                    <rect x="0" y="0" width="300" height="30" rx="10" ry="10" class="module-header"/>
+                    <text x="150" y="21" text-anchor="middle" class="title-text">EXPLAINABILITY SERVICE</text>
+                    <text x="150" y="78" text-anchor="middle" class="label-text">'EXPLAIN-WHY' MODULE</text>
+                </g>
+            </g>
+
+            <!-- THIRD PARTY & DATA ROW 2 -->
+             <g id="data-row">
+                <!-- EXTERNAL APIs -->
+                <g id="external-apis" class="clickable-module" transform="translate(50, 760)">
+                    <rect x="0" y="0" width="300" height="170" rx="10" class="service-box" filter="url(#shadow)"/>
+                    <text x="150" y="27" text-anchor="middle" class="label-text" style="font-weight:bold;">EXTERNAL APIS</text>
+                    <g transform="translate(50, 50)">
+                        <rect x="0" y="0" width="200" height="25" class="api-stack"/> <rect x="3" y="-3" width="200" height="25" class="api-stack"/> <rect x="6" y="-6" width="200" height="25" class="api-stack"/>
+                        <text x="100" y="13" text-anchor="middle" class="label-text">GOOGLE FACT CHECK API</text>
+                    </g>
+                    <g transform="translate(50, 95)">
+                        <rect x="0" y="0" width="200" height="25" class="api-stack"/> <rect x="3" y="-3" width="200" height="25" class="api-stack"/> <rect x="6" y="-6" width="200" height="25" class="api-stack"/>
+                        <text x="100" y="13" text-anchor="middle" class="label-text">KNOWLEDGE GRAPH API</text>
+                    </g>
+                     <g transform="translate(50, 140)">
+                        <rect x="0" y="0" width="200" height="25" class="api-stack"/> <rect x="3" y="-3" width="200" height="25" class="api-stack"/> <rect x="6" y="-6" width="200" height="25" class="api-stack"/>
+                        <text x="100" y="13" text-anchor="middle" class="label-text">TRUSTED NEWS APIS</text>
+                    </g>
+                </g>
+                <!-- DATA STORAGE -->
+                <g id="data-storage" class="clickable-module" transform="translate(410, 760)">
+                    <rect x="0" y="0" width="540" height="170" rx="10" class="service-box" filter="url(#shadow)"/>
+                    <text x="270" y="27" text-anchor="middle" class="label-text" style="font-weight:bold;">DATA STORAGE</text>
+                    <!-- Firestore -->
+                    <g transform="translate(50, 55)">
+                        <ellipse cx="60" cy="15" rx="60" ry="15" class="database-cylinder-top"/> <rect x="0" y="15" width="120" height="50" class="database-cylinder-body"/> <ellipse cx="60" cy="65" rx="60" ry="15" class="database-cylinder-body" style="fill: #5eead4;"/>
+                        <text x="60" y="42" text-anchor="middle" class="label-text">FIRESTORE</text>
+                        <text x="60" y="95" text-anchor="middle" class="sub-label-text">USER PROFILES, FACT WALL</text>
+                        <text x="60" y="110" text-anchor="middle" class="sub-label-text">GAMIFICATION DATA</text>
+                    </g>
+                    <!-- BigQuery -->
+                     <g transform="translate(210, 55)">
+                        <ellipse cx="60" cy="15" rx="60" ry="15" class="database-cylinder-top"/> <rect x="0" y="15" width="120" height="50" class="database-cylinder-body"/> <ellipse cx="60" cy="65" rx="60" ry="15" class="database-cylinder-body" style="fill: #5eead4;"/>
+                        <text x="60" y="42" text-anchor="middle" class="label-text">BIGQUERY</text>
+                        <text x="60" y="95" text-anchor="middle" class="sub-label-text">SOURCE TRUST SCORES</text>
+                        <text x="60" y="110" text-anchor="middle" class="sub-label-text">& ANALYTICS DATA</text>
+                    </g>
+                    <!-- Cloud Storage -->
+                     <g transform="translate(370, 55)">
+                        <ellipse cx="60" cy="15" rx="60" ry="15" class="database-cylinder-top"/> <rect x="0" y="15" width="120" height="50" class="database-cylinder-body"/> <ellipse cx="60" cy="65" rx="60" ry="15" class="database-cylinder-body" style="fill: #5eead4;"/>
+                        <text x="60" y="42" text-anchor="middle" class="label-text">CLOUD STORAGE</text>
+                        <text x="60" y="100" text-anchor="middle" class="sub-label-text">MEDIA, BADGES, ASSETS</text>
+                    </g>
+                </g>
+                <!-- ANALYTICS -->
+                 <g id="analytics" class="clickable-module" transform="translate(1010, 760)">
+                    <rect x="0" y="0" width="340" height="170" rx="10" class="service-box" filter="url(#shadow)"/>
+                    <text x="170" y="27" text-anchor="middle" class="label-text" style="font-weight:bold;">ANALYTICS & VISUALIZATION</text>
+                     <rect x="70" y="65" width="200" height="60" rx="5" class="module-body" />
+                     <rect x="70" y="65" width="200" height="20" rx="5" ry="5" class="module-header"/>
+                     <text x="170" y="80" text-anchor="middle" class="title-text" style="font-size:12px;">GOOGLE DATA STUDIO</text>
+                     <text x="170" y="107" text-anchor="middle" class="label-text">DASHBOARDING & METRICS</text>
+                </g>
+            </g>
+
+            <!-- CONNECTORS -->
+            <path d="M 600 80 V 139" class="connector-line" marker-end="url(#arrowhead)"/>
+            <path d="M 700 370 V 399" class="connector-line" marker-end="url(#arrowhead)"/>
+            <text x="715" y="388" class="arrow-label-text">REST / HTTPS</text>
+            
+            <!-- API Gateway to Services -->
+            <path d="M 200 520 L 1220 520" class="connector-line"/>
+            <path d="M 700 510 V 520" class="connector-line" />
+            <path d="M 200 520 V 539" class="connector-line" marker-end="url(#arrowhead)"/>
+            <path d="M 540 520 V 539" class="connector-line" marker-end="url(#arrowhead)"/>
+            <path d="M 880 520 V 539" class="connector-line" marker-end="url(#arrowhead)"/>
+            <path d="M 1220 520 V 539" class="connector-line" marker-end="url(#arrowhead)"/>
+            
+            <!-- AI Service to External APIs -->
+            <path d="M 200 660 V 759" class="connector-line" marker-end="url(#arrowhead)"/>
+            <text x="210" y="710" class="arrow-label-text">API Calls</text>
+
+            <!-- Services to Data Storage -->
+            <path d="M 540 660 V 710 H 500 V 759" class="data-flow-line" marker-end="url(#data-arrowhead)"/> <!-- Auth to Firestore -->
+            <path d="M 880 660 V 720 H 750 V 759" class="data-flow-line" marker-end="url(#data-arrowhead)"/> <!-- Gamification to multiple DBs -->
+             <path d="M 1220 660 V 720 H 860 V 759" class="data-flow-line" marker-end="url(#data-arrowhead)"/> <!-- Explainability to BigQuery -->
+            <text x="720" y="690" class="arrow-label-text">Data Read/Write</text>
+            
+            <!-- Data Storage to Analytics -->
+            <path d="M 950 845 H 1009" class="data-flow-line" marker-end="url(#data-arrowhead)"/>
+            <text x="980" y="840" text-anchor="middle" class="arrow-label-text">Data Read</text>
+
+            </g> <!-- End Main Diagram Group -->
+        </svg>
+    </div>
+
+    <!-- Modal Popup HTML -->
+    <div id="modal" class="modal-overlay">
+        <div class="modal-content">
+            <span id="modal-close" class="modal-close">&times;</span>
+            <h2 id="modal-title"></h2>
+            <p id="modal-description"></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const descriptions = {
+                'user-devices': {
+                    title: 'User Devices',
+                    description: 'The entry points for users, including desktop and mobile web browsers, ensuring a responsive experience across all platforms.'
+                },
+                'web-app': {
+                    title: 'Responsive Web Application',
+                    description: 'The frontend of FACTLENS, built with modern technology like React/Next.js. It includes all user-facing modules like the Content Analyzer, Fact Wall, and Dashboard.'
+                },
+                'api-gateway': {
+                    title: 'API Gateway',
+                    description: 'The single entry point for the frontend to communicate with all backend services. It manages requests, routing, and security, built on Google Cloud Functions for scalability.'
+                },
+                'ai-nlp': {
+                    title: 'AI & NLP Processing',
+                    description: 'The core intelligence of the platform. It uses the Gemini API for deep analysis and custom NLP models to extract claims and moderate content for spam.'
+                },
+                'authentication': {
+                    title: 'Authentication Service',
+                    description: 'Manages user identity, sign-in, and sessions using Firebase Authentication. This service secures user data and enables personalized features like the dashboard.'
+                },
+                'gamification': {
+                    title: 'Gamification Service',
+                    description: 'Drives user engagement by managing points, badges, and leaderboard calculations. It encourages active and consistent participation in the fact-checking community.'
+                },
+                'explainability': {
+                    title: 'Explainability Service',
+                    description: "The 'Explain-Why' module. It generates clear, user-friendly explanations for why a piece of content was flagged, linking to evidence and sources to build trust and transparency."
+                },
+                'external-apis': {
+                    title: 'External APIs',
+                    description: 'A collection of third-party services used to verify claims. This includes the Google Fact Check API, Google Knowledge Graph for context, and a curated list of trusted news APIs for cross-validation.'
+                },
+                'data-storage': {
+                    title: 'Data Storage',
+                    description: 'The persistence layer for the application. It consists of Firestore for flexible user and community data, BigQuery for large-scale analytics and trust scores, and Cloud Storage for media assets like badges and images.'
+                },
+                'analytics': {
+                    title: 'Analytics & Visualization',
+                    description: 'Gathers data from Firestore and BigQuery to generate insights. It powers the visualizations on the user dashboard and provides platform metrics via Google Data Studio.'
+                }
+            };
+
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalDescription = document.getElementById('modal-description');
+            const closeModal = document.getElementById('modal-close');
+            const clickableModules = document.querySelectorAll('.clickable-module');
+
+            clickableModules.forEach(module => {
+                module.addEventListener('click', () => {
+                    const id = module.id;
+                    const content = descriptions[id];
+                    if (content) {
+                        modalTitle.textContent = content.title;
+                        modalDescription.textContent = content.description;
+                        modal.classList.add('visible');
+                    }
+                });
+            });
+
+            const hideModal = () => {
+                modal.classList.remove('visible');
+            };
+
+            closeModal.addEventListener('click', hideModal);
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    hideModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
